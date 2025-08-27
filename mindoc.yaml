@@ -1,0 +1,26 @@
+services:
+  mindoc:
+    image: registry.cn-hangzhou.aliyuncs.com/mindoc-org/mindoc:v2.1
+    container_name: mindoc
+    privileged: false
+    restart: always
+    ports:
+      - "10004:8181"
+    volumes:
+      - /home/mindoc/conf:/mindoc/conf
+      - /home/mindoc/database:/mindoc/database
+      - /home/mindoc/runtime:/mindoc/runtime
+      - /home/mindoc/static:/mindoc/static
+      - /home/mindoc/views:/mindoc/views
+      - /home/mindoc/uploads:/mindoc/uploads
+    environment:
+      - MINDOC_RUN_MODE=prod
+      - MINDOC_DB_ADAPTER=sqlite3
+      - MINDOC_DB_DATABASE=./database/mindoc.db
+      - MINDOC_BASE_URL=
+   # 导出配置
+      - MINDOC_ENABLE_EXPORT=true  # 默认开启导出功能
+      - MINDOC_EXPORT_PROCESS_NUM=1  # 导出程序的并行数量
+      - MINDOC_EXPORT_LIMIT_NUM=5  # 同一时间限制的导出项目数量
+      - MINDOC_EXPORT_QUEUE_LIMIT_NUM=100  # 等待导出的任务数量
+      - MINDOC_EXPORT_OUTPUT_PATH=./runtime/cache  # 导出项目的缓存目录
