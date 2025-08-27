@@ -5,8 +5,8 @@
 # HEALTH_PORT=10004
 # HEALTH_PATH=/login
 #
-# 日志落盘：使用 json-file 驱动，日志保存到
-# /home/dockerlog/<容器名>/container.log
+# 日志落盘：使用 local 驱动 + 卷挂载
+# 宿主机路径：/home/dockerlog/mindoc/container.log
 # ==========================
 
 services:
@@ -24,6 +24,9 @@ services:
       - /home/mindoc/static:/mindoc/static
       - /home/mindoc/views:/mindoc/views
       - /home/mindoc/uploads:/mindoc/uploads
+      # 日志持久化
+      - /home/dockerlog/mindoc:/var/log/mindoc
+
     environment:
       - MINDOC_RUN_MODE=prod
       - MINDOC_DB_ADAPTER=sqlite3
@@ -46,10 +49,10 @@ services:
       start_period: 30s
 
     # -------------------------------------------------
-    # 日志落盘配置
+    # 日志落盘配置：local 驱动
     # -------------------------------------------------
     logging:
-      driver: "json-file"
+      driver: "local"
       options:
         max-size: "100m"
         max-file: "5"
