@@ -1,3 +1,23 @@
+# ==========================
+# MinDoc 生产级 Compose 文件
+# ==========================
+# 业务探活注释：脚本会读取下面两行
+# HEALTH_PORT=10004
+# HEALTH_PATH=/login
+#
+# 使用说明：
+#   - 10004 为宿主机对外端口，映射到容器内 8181
+#   - 如需修改对外端口，仅需调整 ports 字段及 HEALTH_PORT 注释即可
+#   - 如需修改探活路径，仅需调整 HEALTH_PATH 注释即可
+#
+# 部署命令（Ubuntu 示例）：
+#   sudo docker-compose up -d
+#
+# 查看状态：
+#   sudo docker ps
+#   sudo docker logs mindoc
+# ==========================
+
 services:
   mindoc:
     image: registry.cn-hangzhou.aliyuncs.com/mindoc-org/mindoc:v2.1
@@ -5,7 +25,7 @@ services:
     privileged: false
     restart: always
     ports:
-      - "10004:8181"
+      - "10004:8181"                # 宿主机 : 容器
     volumes:
       - /home/mindoc/conf:/mindoc/conf
       - /home/mindoc/database:/mindoc/database
@@ -18,9 +38,33 @@ services:
       - MINDOC_DB_ADAPTER=sqlite3
       - MINDOC_DB_DATABASE=./database/mindoc.db
       - MINDOC_BASE_URL=
-   # 导出配置
-      - MINDOC_ENABLE_EXPORT=true  # 默认开启导出功能
-      - MINDOC_EXPORT_PROCESS_NUM=1  # 导出程序的并行数量
-      - MINDOC_EXPORT_LIMIT_NUM=5  # 同一时间限制的导出项目数量
-      - MINDOC_EXPORT_QUEUE_LIMIT_NUM=100  # 等待导出的任务数量
-      - MINDOC_EXPORT_OUTPUT_PATH=./runtime/cache  # 导出项目的缓存目录
+      - MINDOC_ENABLE_EXPORT=true
+      - MINDOC_EXPORT_PROCESS_NUM=1
+      - MINDOC_EXPORT_LIMIT_NUM=5
+      - MINDOC_EXPORT_QUEUE_LIMIT_NUM=100
+      - MINDOC_EXPORT_OUTPUT_PATH=./runtime/cache
+
+    # -------------------------------------------------
+    # 健康检查（容器内部自动执行）
+    # -------------------------------------------------
+    # 1. 执行者：Docker 引擎在容器内运行一条等效命令
+    #    docker exec mindoc curl -k -f http://localhost:8181/login
+    # 2. 执行时机：
+    #    ├─ start_period: 30s   启动后前 30 秒失败不计入重试
+    #    ├─ interval: 30s       之后每 30 秒执行一次
+    #    ├─ timeout: 10s        单次探测最长 10 秒
+    #    └─ retries: 3          连续 3 次失败 → unhealthy
+    # 3. 判定：
+    #    ├─ 返回码 0   (HTTP 200-399) → healthy
+    #    ├─ 非 0 / 超时            → 失败计数
+    #    └─ 连续 3 次失败          → docker ps 显示 unhealthy
+    # 4. 查看：
+    #    docker ps --format "table {{.Names}}\t{{.Status}}"
+    #    docker inspect mindoc --format '{{range .State.Health.Log}}{{.Output}}{{end}}'
+    # -------------------------------------------------
+    healthcheck:
+      test: ["CMD-SHELL", "curl -k -f http://localhost:8181/login || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
